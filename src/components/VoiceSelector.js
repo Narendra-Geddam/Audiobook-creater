@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { FormControl, InputLabel, Select, MenuItem } from '@mui/material';
+import { FormControl, InputLabel, Select, MenuItem, Box } from '@mui/material';
 
 const VoiceSelector = ({ onLanguageSelect, onVoiceSelect }) => {
   const [languages, setLanguages] = useState([]);
@@ -69,7 +69,7 @@ const VoiceSelector = ({ onLanguageSelect, onVoiceSelect }) => {
 
   useEffect(() => {
     setLanguages(Object.entries(languageOptions).map(([code, label]) => ({ code, label })));
-    fetchVoices(selectedLanguage);// eslint-disable-next-line
+    fetchVoices(selectedLanguage); // eslint-disable-next-line
   }, [selectedLanguage]);
 
   const fetchVoices = async (language) => {
@@ -100,7 +100,7 @@ const VoiceSelector = ({ onLanguageSelect, onVoiceSelect }) => {
   };
 
   return (
-    <div>
+    <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2 }}>
       <FormControl fullWidth margin="normal">
         <InputLabel>Language</InputLabel>
         <Select value={selectedLanguage} onChange={handleLanguageChange}>
@@ -119,7 +119,7 @@ const VoiceSelector = ({ onLanguageSelect, onVoiceSelect }) => {
           ))}
         </Select>
       </FormControl>
-    </div>
+    </Box>
   );
 };
 

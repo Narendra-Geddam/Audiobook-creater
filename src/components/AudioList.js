@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
     Button,
     List,
@@ -9,8 +9,16 @@ import {
     TextField,
     Typography,
     IconButton,
+    LinearProgress,
+    Box,
 } from '@mui/material';
-import { Edit as EditIcon, Download as DownloadIcon, Delete as DeleteIcon, PlayArrow as PlayArrowIcon } from '@mui/icons-material';
+import {
+    Edit as EditIcon,
+    Download as DownloadIcon,
+    Delete as DeleteIcon,
+    PlayArrow as PlayArrowIcon,
+    Pause as PauseIcon,
+} from '@mui/icons-material';
 import axios from 'axios';
 
 const AudioList = ({ audios, onRefresh }) => {
@@ -18,7 +26,8 @@ const AudioList = ({ audios, onRefresh }) => {
     const [editingAudio, setEditingAudio] = useState(null);
     const [newName, setNewName] = useState('');
     const [playingAudio, setPlayingAudio] = useState(null);
-    const audioRef = React.useRef(null); // Reference to the audio element
+    const [progress, setProgress] = useState({});
+    const audioRef = useRef(null);
 
     const handleToggle = (audio) => {
         const newSelected = selectedAudios.includes(audio)
@@ -35,16 +44,14 @@ const AudioList = ({ audios, onRefresh }) => {
         }
 
         try {
-            // Send request to rename the audio
             await axios.post('http://localhost:3001/api/rename-audio', {
                 oldName,
                 newName: newName.trim(),
             });
 
-            // Call onRefresh to refresh the audio list
             onRefresh();
-            setEditingAudio(null); // Reset editing state
-            setNewName(''); // Clear new name after renaming
+            setEditingAudio(null);
+            setNewName('');
         } catch (error) {
             console.error('Error renaming audio:', error);
             alert(`Error: ${error.response ? error.response.data : error.message}`);
@@ -55,8 +62,8 @@ const AudioList = ({ audios, onRefresh }) => {
         if (window.confirm(`Are you sure you want to delete these files: ${filenames.join(', ')}?`)) {
             try {
                 await axios.post('http://localhost:3001/api/delete-audios', { filenames });
-                onRefresh(); // Callback to refresh the audio list
-                setSelectedAudios([]); // Reset selection
+                onRefresh();
+                setSelectedAudios([]);
             } catch (error) {
                 console.error('Error deleting audio files:', error);
                 alert(`Error: ${error.response ? error.response.data : error.message}`);
@@ -78,8 +85,8 @@ const AudioList = ({ audios, onRefresh }) => {
                 outputName,
             });
             alert('Audios merged successfully');
-            setSelectedAudios([]); // Reset selection
-            onRefresh(); // Refresh the audio list after merging
+            setSelectedAudios([]);
+            onRefresh();
         } catch (error) {
             console.error('Error merging audios:', error);
             alert(`Error: ${error.response ? error.response.data : error.message}`);
@@ -129,22 +136,45 @@ const AudioList = ({ audios, onRefresh }) => {
         }
     };
 
-    const handlePlay = (audio) => {
+    const handlePlayPause = (audio) => {
         if (playingAudio === audio) {
-            setPlayingAudio(null); // Stop if the same audio is clicked again
-            audioRef.current.pause(); // Pause audio
-            audioRef.current.src = ""; // Clear the source
+            audioRef.current.pause();
+            setPlayingAudio(null);
         } else {
             setPlayingAudio(audio);
-            audioRef.current.src = `http://localhost:3001/api/play-audio/${audio}`; // Set the audio source
-            audioRef.current.play(); // Play the audio
+            audioRef.current.src = `http://localhost:3001/api/play-audio/${audio}`;
+            audioRef.current.play();
         }
     };
+
+    const handleProgressChange = (audio, event) => {
+        const { value } = event.target;
+        if (audioRef.current && playingAudio === audio) {
+            audioRef.current.currentTime = (audioRef.current.duration * value) / 100;
+        }
+    };
+
+    useEffect(() => {
+        if (audioRef.current) {
+            const handleTimeUpdate = () => {
+                const progressValue = (audioRef.current.currentTime / audioRef.current.duration) * 100;
+                setProgress((prevProgress) => ({
+                    ...prevProgress,
+                    [playingAudio]: progressValue,
+                }));
+            };
+
+            audioRef.current.addEventListener('timeupdate', handleTimeUpdate);
+
+            return () => { // eslint-disable-next-line
+                audioRef.current.removeEventListener('timeupdate', handleTimeUpdate);
+            };
+        }
+    }, [playingAudio]);
 
     return (
         <div style={{ padding: '20px', backgroundColor: '#f0f4f8' }}>
             <Typography variant="h6" style={{ color: '#2c3e50' }}>Audio Files</Typography>
-            {/* Buttons for Downloading, Merging, and Deleting Selected Audios */}
             <div style={{ marginTop: '20px', display: selectedAudios.length > 0 ? 'flex' : 'none', justifyContent: 'space-between' }}>
                 <Button variant="contained" onClick={handleDownloadSelected} color="primary">
                     Download Selected
@@ -158,55 +188,65 @@ const AudioList = ({ audios, onRefresh }) => {
             </div>
             <List>
                 {audios.map((audio) => (
-                    <ListItem key={audio} onClick={() => handleToggle(audio)} style={{ backgroundColor: selectedAudios.includes(audio) ? '#d1f7d3' : '#ffffff' }}>
-                        <Checkbox
-                            edge="start"
-                            checked={selectedAudios.includes(audio)}
-                            tabIndex={-1}
-                            disableRipple
-                        />
-                        <ListItemText primary={audio} />
-                        <ListItemSecondaryAction>
-                            <IconButton onClick={() => handlePlay(audio)} style={{ marginRight: '8px' }}>
-                                <PlayArrowIcon />
-                            </IconButton>
-                            {editingAudio === audio ? (
-                                <>
-                                    <TextField
-                                        label="New Name"
-                                        variant="outlined"
-                                        size="small"
-                                        value={newName}
-                                        onChange={(e) => setNewName(e.target.value)}
-                                        onBlur={() => { 
-                                            // Reset editing state if user clicks outside
-                                            handleRename(audio); // Rename on blur
-                                        }}
-                                        onKeyPress={(e) => {
-                                            if (e.key === 'Enter') {
-                                                handleRename(audio); // Rename on Enter
-                                            }
-                                        }}
-                                    />
-                                    <Button onClick={() => handleRename(audio)}>Rename</Button>
-                                </>
-                            ) : (
-                                <>
-                                    <IconButton onClick={() => { 
-                                        setEditingAudio(audio); 
-                                        setNewName(audio); // Set newName to current audio name
-                                    }}>
-                                        <EditIcon />
-                                    </IconButton>
-                                    <IconButton onClick={() => handleDownload(audio)}>
-                                        <DownloadIcon />
-                                    </IconButton>
-                                    <IconButton onClick={() => handleDelete([audio])}>
-                                        <DeleteIcon />
-                                    </IconButton>
-                                </>
-                            )}
-                        </ListItemSecondaryAction>
+                    <ListItem key={audio} style={{ backgroundColor: selectedAudios.includes(audio) ? '#d1f7d3' : '#ffffff', flexDirection: 'column' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+                            <Checkbox
+                                edge="start"
+                                checked={selectedAudios.includes(audio)}
+                                tabIndex={-1}
+                                disableRipple
+                                onClick={() => handleToggle(audio)}
+                            />
+                            <ListItemText primary={audio} />
+                            <ListItemSecondaryAction>
+                                <IconButton onClick={() => handlePlayPause(audio)} style={{ marginRight: '8px' }}>
+                                    {playingAudio === audio ? <PauseIcon /> : <PlayArrowIcon />}
+                                </IconButton>
+                                {editingAudio === audio ? (
+                                    <>
+                                        <TextField
+                                            label="New Name"
+                                            variant="outlined"
+                                            size="small"
+                                            value={newName}
+                                            onChange={(e) => setNewName(e.target.value)}
+                                            onBlur={() => handleRename(audio)}
+                                            onKeyPress={(e) => {
+                                                if (e.key === 'Enter') {
+                                                    handleRename(audio);
+                                                }
+                                            }}
+                                        />
+                                        <Button onClick={() => handleRename(audio)}>Rename</Button>
+                                    </>
+                                ) : (
+                                    <>
+                                        <IconButton onClick={() => { 
+                                            setEditingAudio(audio); 
+                                            setNewName(audio); 
+                                        }}>
+                                            <EditIcon />
+                                        </IconButton>
+                                        <IconButton onClick={() => handleDownload(audio)}>
+                                            <DownloadIcon />
+                                        </IconButton>
+                                        <IconButton onClick={() => handleDelete([audio])}>
+                                            <DeleteIcon />
+                                        </IconButton>
+                                    </>
+                                )}
+                            </ListItemSecondaryAction>
+                        </div>
+                        {playingAudio === audio && (
+                            <Box sx={{ width: '100%', mt: 1 }}>
+                                <LinearProgress
+                                    variant="determinate"
+                                    value={progress[audio] || 0}
+                                    onClick={(e) => handleProgressChange(audio, e)}
+                                    style={{ cursor: 'pointer' }}
+                                />
+                            </Box>
+                        )}
                     </ListItem>
                 ))}
             </List>

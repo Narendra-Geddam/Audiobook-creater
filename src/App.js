@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Container, Typography, CircularProgress } from '@mui/material';
+import { Container, Typography, CircularProgress,Box } from '@mui/material';
 import Header from './components/Header';
 import VoiceSelector from './components/VoiceSelector';
 import TextInput from './components/TextInput';
 import GeneratedAudio from './components/GeneratedAudio';
 import AudioList from './components/AudioList';
+import './App.css';
 
 const App = () => {
   const [selectedLanguage, setSelectedLanguage] = useState('en-US');
@@ -86,30 +87,44 @@ const App = () => {
 
   return (
     <>
-      <Header />
-      <Container maxWidth="md" sx={{ padding: 2 }}>
-        <Typography variant="h3" align="center" gutterBottom>
-          Extraordinary Audiobook Generator
-        </Typography>
-        <VoiceSelector 
-          onLanguageSelect={setSelectedLanguage}
-          onVoiceSelect={setSelectedVoice}
-        />
-        <TextInput onSubmit={handleTextSubmit} />
-        {loading ? (
-          <CircularProgress sx={{ display: 'block', margin: '20px auto' }} />
-        ) : (
-          <>
-            {errorMessage && (
-              <Typography color="error" align="center">{errorMessage}</Typography>
-            )}
-            <GeneratedAudio audioUrl={audioUrl} />
-          </>
-        )}
-        {/* Pass the handleRename function to AudioList */}
-        <AudioList audios={audios} onRefresh={fetchGeneratedAudios} onRename={handleRename} />
-      </Container>
-    </>
+    <Header />
+    <Container maxWidth="xxl" sx={{ padding: 2, margin: '0 auto' }}>
+      <Typography variant="h3" align="center" gutterBottom>
+        Extraordinary Audiobook Generator
+      </Typography>
+      {/* Use flexbox to create two columns */}
+      <Box sx={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-between', gap: 2 }}>
+        
+        {/* Left Side: Main content (VoiceSelector, TextInput, etc.) */}
+        <Box sx={{ flex: 3, paddingRight: 2 }}>
+          <VoiceSelector 
+            onLanguageSelect={setSelectedLanguage}
+            onVoiceSelect={setSelectedVoice}
+          />
+          <TextInput onSubmit={handleTextSubmit} />
+          {loading ? (
+            <CircularProgress sx={{ display: 'block', margin: '20px auto' }} />
+          ) : (
+            <>
+              {errorMessage && (
+                <Typography color="error" align="center">{errorMessage}</Typography>
+              )}
+              <GeneratedAudio audioUrl={audioUrl} />
+            </>
+          )}
+        </Box>
+  
+        {/* Right Side: Audio List */}
+        <Box sx={{ flex: 2, maxWidth: '600px', paddingLeft: 2 }}>
+          {/* Pass the handleRename function to AudioList */}
+          <AudioList audios={audios} onRefresh={fetchGeneratedAudios} onRename={handleRename} />
+        </Box>
+  
+      </Box>
+    </Container>
+  </>
+  
+
   );
 };
 

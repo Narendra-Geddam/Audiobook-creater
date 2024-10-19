@@ -4,6 +4,7 @@ const bodyParser = require('body-parser');
 const cors = require('cors');
 const { exec } = require('child_process');
 const path = require('path');
+const sanitizeFilename = require('sanitize-filename'); // Added for filename sanitization
 
 const app = express();
 const port = 3001;
@@ -21,16 +22,17 @@ if (!fs.existsSync(audioDirectory)) {
 // Endpoint to save audio files
 app.post('/api/save-audio', (req, res) => {
     const { filename, data } = req.body;
+    const sanitizedFilename = sanitizeFilename(filename);
 
     // Convert base64 string back to binary
     const buffer = Buffer.from(data, 'base64');
 
-    fs.writeFile(`${audioDirectory}/${filename}`, buffer, (err) => {
+    fs.writeFile(`${audioDirectory}/${sanitizedFilename}`, buffer, (err) => {
         if (err) {
             console.error('Error saving audio file:', err);
             return res.status(500).send('Error saving audio');
         }
-        res.status(200).send('Audio saved');
+        res.status(201).send('Audio saved successfully');
     });
 });
 
@@ -42,7 +44,6 @@ app.get('/api/generated-audios', (req, res) => {
             return res.status(500).send('Internal Server Error');
         }
         const audioFiles = files.filter(file => file.endsWith('.mp3'));
-        console.log('Audio files:', audioFiles); // Log the files
         res.json(audioFiles);
     });
 });
@@ -50,38 +51,32 @@ app.get('/api/generated-audios', (req, res) => {
 // Endpoint to rename audio files
 app.post('/api/rename-audio', (req, res) => {
     const { oldName, newName } = req.body;
+    const sanitizedOldName = sanitizeFilename(oldName);
+    const sanitizedNewName = sanitizeFilename(newName);
 
-    // Check for valid names
-    if (!oldName || !newName) {
+    if (!sanitizedOldName || !sanitizedNewName) {
         return res.status(400).send('Both oldName and newName are required');
     }
 
-    const oldPath = path.join(audioDirectory, oldName);
-    const newPath = path.join(audioDirectory, newName);
+    const oldPath = path.join(audioDirectory, sanitizedOldName);
+    const newPath = path.join(audioDirectory, sanitizedNewName);
 
-    // Check if the old file exists
     fs.access(oldPath, fs.constants.F_OK, (err) => {
         if (err) {
-            console.error('File does not exist:', oldPath);
             return res.status(404).send('File not found');
         }
 
-        // Check if the new name is the same as the old name
-        if (oldName === newName) {
+        if (sanitizedOldName === sanitizedNewName) {
             return res.status(400).send('New name must be different from old name');
         }
 
-        // Check if a file with the new name already exists
         fs.access(newPath, fs.constants.F_OK, (err) => {
             if (!err) {
-                console.error('A file with the new name already exists:', newPath);
                 return res.status(409).send('A file with that name already exists');
             }
 
-            // Rename the file
             fs.rename(oldPath, newPath, (err) => {
                 if (err) {
-                    console.error('Error renaming audio file:', err);
                     return res.status(500).send('Error renaming audio');
                 }
                 res.status(200).send('Audio renamed successfully');
@@ -94,27 +89,22 @@ app.post('/api/rename-audio', (req, res) => {
 app.post('/api/merge-audios', (req, res) => {
     const { filenames, outputName } = req.body;
 
-    // Check if filenames are provided
     if (!filenames || filenames.length === 0) {
         return res.status(400).send('No audio files provided for merging');
     }
 
-    // Create a temporary text file containing the list of audio files to merge
     const listFilePath = path.join(__dirname, 'temp.txt');
-    const filePaths = filenames.map(filename => `file '${path.join(audioDirectory, filename)}'`).join('\n');
+    const filePaths = filenames.map(filename => `file '${path.join(audioDirectory, sanitizeFilename(filename))}'`).join('\n');
 
     fs.writeFile(listFilePath, filePaths, (err) => {
         if (err) {
-            console.error('Error writing list file:', err);
             return res.status(500).send('Error preparing files for merging');
         }
 
-        // Use FFmpeg to merge audio files (make sure FFmpeg is installed)
-        const outputPath = path.join(audioDirectory, outputName);
+        const outputPath = path.join(audioDirectory, sanitizeFilename(outputName));
         exec(`ffmpeg -f concat -safe 0 -i ${listFilePath} -c copy ${outputPath}`, (error) => {
             fs.unlink(listFilePath, () => {}); // Delete the temporary list file
             if (error) {
-                console.error('Error merging audio files:', error.message); // Log the error message
                 return res.status(500).send('Error merging audios');
             }
             res.status(200).send('Audios merged successfully');
@@ -124,28 +114,44 @@ app.post('/api/merge-audios', (req, res) => {
 
 // Endpoint to play audio files
 app.get('/api/play-audio/:filename', (req, res) => {
-    const filename = req.params.filename;
+    const filename = sanitizeFilename(req.params.filename);
     const filePath = path.join(audioDirectory, filename);
-    
-    // Set the correct content type for audio files
-    res.setHeader('Content-Type', 'audio/mpeg');
-    res.sendFile(filePath, (err) => {
+
+    fs.stat(filePath, (err, stats) => {
         if (err) {
-            console.error('Error sending audio file:', err);
-            res.status(500).send('Error sending audio');
+            return res.status(404).send('Audio file not found');
         }
+
+        const range = req.headers.range;
+        if (!range) {
+            res.setHeader('Content-Type', 'audio/mpeg');
+            return fs.createReadStream(filePath).pipe(res);
+        }
+
+        const positions = range.replace(/bytes=/, "").split("-");
+        const start = parseInt(positions[0], 10);
+        const end = positions[1] ? parseInt(positions[1], 10) : stats.size - 1;
+        const chunkSize = (end - start) + 1;
+
+        res.writeHead(206, {
+            'Content-Range': `bytes ${start}-${end}/${stats.size}`,
+            'Accept-Ranges': 'bytes',
+            'Content-Length': chunkSize,
+            'Content-Type': 'audio/mpeg',
+        });
+
+        fs.createReadStream(filePath, { start, end }).pipe(res);
     });
 });
 
 // Endpoint to download audio files
 app.get('/api/download-audio/:filename', (req, res) => {
-    const filename = req.params.filename;
+    const filename = sanitizeFilename(req.params.filename);
     const filePath = path.join(audioDirectory, filename);
 
     res.download(filePath, (err) => {
         if (err) {
-            console.error('Error downloading audio file:', err);
-            res.status(500).send('Error downloading audio');
+            return res.status(500).send('Error downloading audio');
         }
     });
 });
@@ -154,33 +160,26 @@ app.get('/api/download-audio/:filename', (req, res) => {
 app.post('/api/delete-audios', (req, res) => {
     const { filenames } = req.body;
 
-    // Check if filenames are provided
     if (!filenames || filenames.length === 0) {
         return res.status(400).send('No audio files provided for deletion');
     }
 
-    // Delete each file
     const deletePromises = filenames.map((filename) => {
-        const filePath = path.join(audioDirectory, filename);
+        const sanitizedFilename = sanitizeFilename(filename);
+        const filePath = path.join(audioDirectory, sanitizedFilename);
         return new Promise((resolve, reject) => {
             fs.unlink(filePath, (err) => {
                 if (err) {
-                    console.error(`Error deleting audio file ${filename}:`, err);
-                    return reject(`Error deleting audio file ${filename}`);
+                    return reject(`Error deleting audio file ${sanitizedFilename}`);
                 }
                 resolve();
             });
         });
     });
 
-    // Wait for all deletions to complete
     Promise.all(deletePromises)
-        .then(() => {
-            res.status(200).send('Audio files deleted successfully');
-        })
-        .catch((error) => {
-            res.status(500).send(error);
-        });
+        .then(() => res.status(204).send())
+        .catch((error) => res.status(500).send(error));
 });
 
 // Start the server
