@@ -1,6 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Button, Select, MenuItem, Typography, Container, FormControl, InputLabel, TextField, Snackbar } from '@mui/material';
+import {
+    Button,
+    Select,
+    MenuItem,
+    Typography,
+    Container,
+    FormControl,
+    InputLabel,
+    TextField,
+    Snackbar,
+    Slider,
+    Box
+} from '@mui/material';
 import MuiAlert from '@mui/material/Alert';
 
 const Alert = React.forwardRef(function Alert(props, ref) {
@@ -16,6 +28,8 @@ const BgmPage = () => {
     const [snackOpen, setSnackOpen] = useState(false);
     const [snackMessage, setSnackMessage] = useState('');
     const [snackSeverity, setSnackSeverity] = useState('success');
+    const [audioVolume, setAudioVolume] = useState(100); // Audio volume (0-100)
+    const [bgmVolume, setBgmVolume] = useState(100); // BGM volume (0-100)
 
     useEffect(() => {
         const fetchAudios = async () => {
@@ -38,6 +52,8 @@ const BgmPage = () => {
                 audioFile: selectedAudio,
                 bgmFile: selectedBgm,
                 outputName,
+                audioVolume,
+                bgmVolume,
             });
 
             // Send the mixing request
@@ -45,6 +61,8 @@ const BgmPage = () => {
                 audioFile: selectedAudio,
                 bgmFile: selectedBgm,
                 outputName,
+                audioVolume, // Include audio volume
+                bgmVolume,   // Include BGM volume
             });
             console.log('Mixing response:', response.data);
 
@@ -96,6 +114,31 @@ const BgmPage = () => {
                 onChange={(e) => setOutputName(e.target.value)}
                 placeholder="Output Name"
             />
+            
+            {/* Audio Volume Slider */}
+            <Typography gutterBottom>Audio Volume: {audioVolume}%</Typography>
+            <Slider
+                value={audioVolume}
+                onChange={(e, newValue) => setAudioVolume(newValue)}
+                aria-labelledby="audio-volume-slider"
+                step={1}
+                marks
+                min={0}
+                max={100}
+            />
+
+            {/* BGM Volume Slider */}
+            <Typography gutterBottom>BGM Volume: {bgmVolume}%</Typography>
+            <Slider
+                value={bgmVolume}
+                onChange={(e, newValue) => setBgmVolume(newValue)}
+                aria-labelledby="bgm-volume-slider"
+                step={1}
+                marks
+                min={0}
+                max={100}
+            />
+
             <Button variant="contained" color="primary" onClick={handleMix} style={{ marginTop: '20px' }}>
                 Mix
             </Button>

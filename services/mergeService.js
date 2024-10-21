@@ -40,14 +40,18 @@ function mergeAudios(filenames, outputName, callback) {
 }
 
 // Function to mix generated audio with BGM
-function mixAudios(audioFile, bgmFile, outputName, callback) {
+function mixAudios(audioFile, bgmFile, outputName, audioVolume, bgmVolume, callback) {
     const audioPath = path.join(audioDirectory, audioFile);
     const bgmPath = path.join(__dirname, '..', 'public', 'background-music', bgmFile);
     const outputPath = path.join(mixedAudioDirectory, outputName);
 
+    // Convert volume from percentage (0-100) to a scale suitable for FFmpeg (0-1)
+    const audioVolumeFilter = `volume=${audioVolume / 100}`;
+    const bgmVolumeFilter = `volume=${bgmVolume / 100}`;
+
     console.log(`Mixing: ${audioPath} with ${bgmPath} to ${outputPath}`); // Log paths
 
-    exec(`ffmpeg -i "${audioPath}" -i "${bgmPath}" -filter_complex "[0:a][1:a]amix=inputs=2:duration=first:dropout_transition=3" "${outputPath}"`, (error) => {
+    exec(`ffmpeg -i "${audioPath}" -i "${bgmPath}" -filter_complex "[0:a]${audioVolumeFilter}[a];[1:a]${bgmVolumeFilter}[b];[a][b]amix=inputs=2:duration=first:dropout_transition=3" "${outputPath}"`, (error) => {
         if (error) {
             console.error('Error mixing audios:', error);
             return callback(error);
@@ -57,7 +61,6 @@ function mixAudios(audioFile, bgmFile, outputName, callback) {
         callback(null); // Only call the callback once, after successful save
     });
 }
-
 
 module.exports = {
     mergeAudios,
