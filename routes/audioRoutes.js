@@ -3,6 +3,11 @@ const router = express.Router();
 const fileService = require('../services/fileService');
 const mergeService = require('../services/mergeService');
 const sanitizeFilename = require('sanitize-filename');
+const fs = require('fs');
+const path = require('path');
+
+// Directory for generated audios
+const audioDirectory = path.join(__dirname, '../public/generated-audios');
 
 // Endpoint to save audio files
 router.post('/save-audio', (req, res) => {
@@ -65,7 +70,52 @@ router.get('/play-audio/:filename', (req, res) => {
 // Endpoint to download audio files
 router.get('/download-audio/:filename', (req, res) => {
     const filename = sanitizeFilename(req.params.filename);
-    fileService.downloadAudioFile(filename, res);
+    const filePath = path.join(audioDirectory, filename);
+
+    console.log(`Attempting to download file: ${filePath}`); // Log download attempt
+
+    res.download(filePath, (err) => {
+        if (err) {
+            console.error('Error downloading file:', err);
+            if (err.status === 404) {
+                return res.status(404).send('File not found');
+            }
+            return res.status(500).send('Error downloading file');
+        } else {
+            console.log(`File downloaded: ${filename}`);
+        }
+    });
+});
+
+// New Endpoint to mix generated audio with BGM
+router.post('/mix-audio', (req, res) => {
+    const { audioFile, bgmFile, outputName } = req.body;
+
+    console.log('Mixing audio with BGM:', { audioFile, bgmFile, outputName }); // Log input parameters
+
+    mergeService.mixAudios(audioFile, bgmFile, outputName, (err) => {
+        if (err) {
+            console.error('Mixing error:', err); // Log the error to the server console
+            return res.status(500).send('Error mixing audios');
+        }
+
+        const outputPath = path.join(audioDirectory, outputName);
+        console.log(`Mixed audio saved to: ${outputPath}`); // Log the full path of the mixed audio
+        res.status(200).send('Audios mixed successfully');
+    });
+});
+
+// New Endpoint to get a list of background music files
+router.get('/background-music', (req, res) => {
+    const bgmDirectory = path.join(__dirname, '../public/background-music');
+    
+    fs.readdir(bgmDirectory, (err, files) => {
+        if (err) return res.status(500).send('Error reading background music directory');
+        
+        // Filter for only audio files (you can customize this to your needs)
+        const bgmFiles = files.filter(file => file.endsWith('.mp3'));
+        res.json(bgmFiles);
+    });
 });
 
 module.exports = router;

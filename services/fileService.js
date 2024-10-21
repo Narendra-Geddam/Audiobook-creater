@@ -3,13 +3,20 @@ const path = require('path');
 
 const audioDirectory = path.join(__dirname, '..', 'public', 'generated-audios');
 
+// Ensure the audio directory exists
 if (!fs.existsSync(audioDirectory)) {
     fs.mkdirSync(audioDirectory, { recursive: true });
 }
 
 function saveAudioFile(filename, data, callback) {
     const buffer = Buffer.from(data, 'base64');
-    fs.writeFile(`${audioDirectory}/${filename}`, buffer, callback);
+    fs.writeFile(`${audioDirectory}/${filename}`, buffer, (err) => {
+        if (err) {
+            console.error('Error saving audio file:', err);
+            return callback(err);
+        }
+        callback(null);
+    });
 }
 
 function getGeneratedAudios(callback) {
@@ -47,7 +54,10 @@ function deleteAudios(filenames, callback) {
         const filePath = path.join(audioDirectory, filename);
         return new Promise((resolve, reject) => {
             fs.unlink(filePath, (err) => {
-                if (err) return reject(`Error deleting audio file ${filename}`);
+                if (err) {
+                    console.error(`Error deleting audio file ${filename}:`, err);
+                    return reject(`Error deleting audio file ${filename}`);
+                }
                 resolve();
             });
         });
@@ -61,7 +71,10 @@ function deleteAudios(filenames, callback) {
 function streamAudioFile(filename, req, res) {
     const filePath = path.join(audioDirectory, filename);
     fs.stat(filePath, (err, stats) => {
-        if (err) return res.status(404).send('Audio file not found');
+        if (err) {
+            console.error('Error fetching audio file:', err);
+            return res.status(404).send('Audio file not found');
+        }
 
         const range = req.headers.range;
         if (!range) {
@@ -88,7 +101,11 @@ function streamAudioFile(filename, req, res) {
 function downloadAudioFile(filename, res) {
     const filePath = path.join(audioDirectory, filename);
     res.download(filePath, (err) => {
-        if (err) return res.status(500).send('Error downloading audio');
+        if (err) {
+            console.error('Error downloading audio file:', err);
+            return res.status(500).send('Error downloading audio');
+        }
+        console.log(`File downloaded: ${filename}`);
     });
 }
 
