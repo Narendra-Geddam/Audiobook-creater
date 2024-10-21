@@ -100,12 +100,19 @@ function streamAudioFile(filename, req, res) {
 
 function downloadAudioFile(filename, res) {
     const filePath = path.join(audioDirectory, filename);
-    res.download(filePath, (err) => {
+    fs.stat(filePath, (err) => {
         if (err) {
-            console.error('Error downloading audio file:', err);
-            return res.status(500).send('Error downloading audio');
+            console.error('Error fetching audio file for download:', err);
+            return res.status(404).send('Audio file not found');
         }
-        console.log(`File downloaded: ${filename}`);
+
+        res.download(filePath, (err) => {
+            if (err) {
+                console.error('Error downloading audio file:', err);
+                return res.status(500).send('Error downloading audio');
+            }
+            console.log(`File downloaded: ${filename}`);
+        });
     });
 }
 

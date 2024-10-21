@@ -3,6 +3,12 @@ const path = require('path');
 const { exec } = require('child_process');
 
 const audioDirectory = path.join(__dirname, '..', 'public', 'generated-audios');
+const mixedAudioDirectory = path.join(__dirname, '..', 'public', 'mixed-audio');
+
+// Ensure the mixed audio directory exists
+if (!fs.existsSync(mixedAudioDirectory)) {
+    fs.mkdirSync(mixedAudioDirectory, { recursive: true });
+}
 
 // Function to merge audio files
 function mergeAudios(filenames, outputName, callback) {
@@ -15,7 +21,7 @@ function mergeAudios(filenames, outputName, callback) {
             return callback(err);
         }
 
-        const outputPath = path.join(audioDirectory, outputName);
+        const outputPath = path.join(audioDirectory, outputName); // Change this if you want merged audio here
         exec(`ffmpeg -f concat -safe 0 -i "${listFilePath}" -c copy "${outputPath}"`, (error) => {
             // Attempt to delete the list file whether there's an error or not
             fs.unlink(listFilePath, (unlinkError) => {
@@ -33,10 +39,11 @@ function mergeAudios(filenames, outputName, callback) {
     });
 }
 
+// Function to mix generated audio with BGM
 function mixAudios(audioFile, bgmFile, outputName, callback) {
     const audioPath = path.join(audioDirectory, audioFile);
     const bgmPath = path.join(__dirname, '..', 'public', 'background-music', bgmFile);
-    const outputPath = path.join(audioDirectory, outputName);
+    const outputPath = path.join(mixedAudioDirectory, outputName);
 
     console.log(`Mixing: ${audioPath} with ${bgmPath} to ${outputPath}`); // Log paths
 
@@ -46,10 +53,12 @@ function mixAudios(audioFile, bgmFile, outputName, callback) {
             return callback(error);
         }
 
-        console.log(`Mixed audio saved to: ${outputPath}`); // Log the output path for debugging
-        callback(null);
+        console.log(`Mixed audio saved to: ${outputPath}`);
+        callback(null); // Only call the callback once, after successful save
     });
 }
+
+
 module.exports = {
     mergeAudios,
     mixAudios

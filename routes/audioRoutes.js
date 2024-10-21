@@ -8,6 +8,7 @@ const path = require('path');
 
 // Directory for generated audios
 const audioDirectory = path.join(__dirname, '../public/generated-audios');
+const mixedAudioDirectory = path.join(__dirname, '../public/mixed-audio'); // New variable for mixed audio directory
 
 // Endpoint to save audio files
 router.post('/save-audio', (req, res) => {
@@ -74,16 +75,21 @@ router.get('/download-audio/:filename', (req, res) => {
 
     console.log(`Attempting to download file: ${filePath}`); // Log download attempt
 
-    res.download(filePath, (err) => {
-        if (err) {
-            console.error('Error downloading file:', err);
-            if (err.status === 404) {
-                return res.status(404).send('File not found');
-            }
-            return res.status(500).send('Error downloading file');
-        } else {
-            console.log(`File downloaded: ${filename}`);
+    // Check if file exists before attempting to download
+    fs.stat(filePath, (err, stats) => {
+        if (err || !stats.isFile()) {
+            console.error('File not found:', filePath);
+            return res.status(404).send('File not found');
         }
+
+        res.download(filePath, (err) => {
+            if (err) {
+                console.error('Error downloading file:', err);
+                return res.status(err.status === 404 ? 404 : 500).send('Error downloading file');
+            } else {
+                console.log(`File downloaded: ${filename}`);
+            }
+        });
     });
 });
 
@@ -99,7 +105,7 @@ router.post('/mix-audio', (req, res) => {
             return res.status(500).send('Error mixing audios');
         }
 
-        const outputPath = path.join(audioDirectory, outputName);
+        const outputPath = path.join(mixedAudioDirectory, outputName); // Ensure mixed audio is saved here
         console.log(`Mixed audio saved to: ${outputPath}`); // Log the full path of the mixed audio
         res.status(200).send('Audios mixed successfully');
     });
@@ -117,5 +123,33 @@ router.get('/background-music', (req, res) => {
         res.json(bgmFiles);
     });
 });
+
+// Endpoint to download mixed audio files
+router.get('/mixed-audio/:filename', (req, res) => {
+    const filename = sanitizeFilename(req.params.filename);
+    const filePath = path.join(__dirname, '../public/mixed-audio', filename);
+
+    console.log(`Attempting to download mixed audio file: ${filePath}`);
+
+    fs.stat(filePath, (err) => {
+        if (err) {
+            console.error('Error downloading mixed audio file:', err);
+            return res.status(404).send('Mixed audio file not found');
+        }
+
+        res.download(filePath, (downloadError) => {
+            if (downloadError) {
+                console.error('Error downloading file:', downloadError);
+                if (downloadError.status === 404) {
+                    return res.status(404).send('File not found');
+                }
+                return res.status(500).send('Error downloading file');
+            } else {
+                console.log(`Mixed audio downloaded: ${filename}`);
+            }
+        });
+    });
+});
+
 
 module.exports = router;
