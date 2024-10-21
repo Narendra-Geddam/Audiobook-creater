@@ -166,8 +166,10 @@ const AudioList = ({ audios, onRefresh }) => {
 
             audioRef.current.addEventListener('timeupdate', handleTimeUpdate);
 
-            return () => { // eslint-disable-next-line
-                audioRef.current.removeEventListener('timeupdate', handleTimeUpdate);
+            return () => {
+                if (audioRef.current) {
+                    audioRef.current.removeEventListener('timeupdate', handleTimeUpdate);
+                }
             };
         }
     }, [playingAudio]);
