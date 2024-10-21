@@ -14,6 +14,7 @@ import {
     Box
 } from '@mui/material';
 import MuiAlert from '@mui/material/Alert';
+import MixedAudioList from './MixedAudioList';
 
 const Alert = React.forwardRef(function Alert(props, ref) {
     return <MuiAlert elevation={6} ref={ref} variant="filled" {...props} />;
@@ -57,28 +58,17 @@ const BgmPage = () => {
             });
 
             // Send the mixing request
-            const response = await axios.post('http://localhost:3001/api/mix-audio', {
+            await axios.post('http://localhost:3001/api/mix-audio', {
                 audioFile: selectedAudio,
                 bgmFile: selectedBgm,
                 outputName,
                 audioVolume, // Include audio volume
                 bgmVolume,   // Include BGM volume
             });
-            console.log('Mixing response:', response.data);
 
             setSnackMessage('Audios mixed successfully');
             setSnackSeverity('success');
             setSnackOpen(true);
-
-            // Download the mixed file
-            const downloadResponse = await axios.get(`http://localhost:3001/api/mixed-audio/${outputName}`, { responseType: 'blob' });
-            const url = window.URL.createObjectURL(new Blob([downloadResponse.data]));
-            const link = document.createElement('a');
-            link.href = url;
-            link.setAttribute('download', outputName);
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
         } catch (error) {
             console.error('Error mixing audios:', error);
             setSnackMessage(`Error: ${error.response ? error.response.data : error.message}`);
@@ -148,6 +138,7 @@ const BgmPage = () => {
                     {snackMessage}
                 </Alert>
             </Snackbar>
+            <MixedAudioList />
         </Container>
     );
 };

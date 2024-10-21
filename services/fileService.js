@@ -21,11 +21,23 @@ function saveAudioFile(filename, data, callback) {
 
 function getGeneratedAudios(callback) {
     fs.readdir(audioDirectory, (err, files) => {
-        if (err) return callback(err, null);
+        if (err) {
+            if (typeof callback === 'function') {
+                return callback(err, null);
+            }
+            console.error('Callback is not a function:', callback);
+            return;
+        }
         const audioFiles = files.filter(file => file.endsWith('.mp3'));
-        callback(null, audioFiles);
+        if (typeof callback === 'function') {
+            callback(null, audioFiles);
+        } else {
+            console.error('Callback is not a function:', callback);
+        }
     });
 }
+
+
 
 function renameAudioFile(oldName, newName, callback) {
     const oldPath = path.join(audioDirectory, oldName);

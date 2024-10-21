@@ -21,7 +21,7 @@ function mergeAudios(filenames, outputName, callback) {
             return callback(err);
         }
 
-        const outputPath = path.join(audioDirectory, outputName); // Change this if you want merged audio here
+        const outputPath = path.join(mixedAudioDirectory, outputName); // Save merged audio to mixed-audio folder
         exec(`ffmpeg -f concat -safe 0 -i "${listFilePath}" -c copy "${outputPath}"`, (error) => {
             // Attempt to delete the list file whether there's an error or not
             fs.unlink(listFilePath, (unlinkError) => {
@@ -34,7 +34,7 @@ function mergeAudios(filenames, outputName, callback) {
             }
 
             console.log(`Successfully merged audios into: ${outputPath}`);
-            callback(null);
+            callback(null); // Success callback
         });
     });
 }
@@ -46,10 +46,10 @@ function mixAudios(audioFile, bgmFile, outputName, audioVolume, bgmVolume, callb
     const outputPath = path.join(mixedAudioDirectory, outputName);
 
     // Convert volume from percentage (0-100) to a scale suitable for FFmpeg (0-1)
-    const audioVolumeFilter = `volume=${audioVolume / 100}`;
-    const bgmVolumeFilter = `volume=${bgmVolume / 100}`;
+    const audioVolumeFilter = `volume=${(audioVolume / 100).toFixed(2)}`;
+    const bgmVolumeFilter = `volume=${(bgmVolume / 100).toFixed(2)}`;
 
-    console.log(`Mixing: ${audioPath} with ${bgmPath} to ${outputPath}`); // Log paths
+    console.log(`Mixing: ${audioPath} with ${bgmPath} to ${outputPath}`);
 
     exec(`ffmpeg -i "${audioPath}" -i "${bgmPath}" -filter_complex "[0:a]${audioVolumeFilter}[a];[1:a]${bgmVolumeFilter}[b];[a][b]amix=inputs=2:duration=first:dropout_transition=3" "${outputPath}"`, (error) => {
         if (error) {
@@ -58,7 +58,7 @@ function mixAudios(audioFile, bgmFile, outputName, audioVolume, bgmVolume, callb
         }
 
         console.log(`Mixed audio saved to: ${outputPath}`);
-        callback(null); // Only call the callback once, after successful save
+        callback(null); // Success callback
     });
 }
 
