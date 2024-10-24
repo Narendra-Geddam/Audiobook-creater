@@ -8,49 +8,53 @@ if (!fs.existsSync(audioDirectory)) {
     fs.mkdirSync(audioDirectory, { recursive: true });
 }
 
+// Save audio file
 function saveAudioFile(filename, data, callback) {
     const buffer = Buffer.from(data, 'base64');
     fs.writeFile(`${audioDirectory}/${filename}`, buffer, (err) => {
         if (err) {
             console.error('Error saving audio file:', err);
-            return callback(err);
+            return callback ? callback(err) : console.error('Callback not provided for saveAudioFile');
         }
-        callback(null);
+        callback && callback(null);  // Added safeguard for optional callback
     });
 }
 
+// Get list of generated audios
 function getGeneratedAudios(callback) {
     fs.readdir(audioDirectory, (err, files) => {
         if (err) {
-            return typeof callback === 'function' ? callback(err, null) : console.error('Callback is not a function');
+            return callback ? callback(err, null) : console.error('Callback not provided for getGeneratedAudios');
         }
         const audioFiles = files.filter(file => file.endsWith('.mp3'));
-        typeof callback === 'function' ? callback(null, audioFiles) : console.error('Callback is not a function');
+        callback && callback(null, audioFiles);  // Added safeguard for optional callback
     });
 }
 
+// Rename audio file
 function renameAudioFile(oldName, newName, callback) {
     const oldPath = path.join(audioDirectory, oldName);
     const newPath = path.join(audioDirectory, newName);
 
     if (oldName === newName) {
-        return callback(new Error('New name must be different'));
+        return callback ? callback(new Error('New name must be different')) : console.error('Callback not provided for renameAudioFile');
     }
 
     fs.access(oldPath, fs.constants.F_OK, (err) => {
-        if (err) return callback(new Error('File not found'));
+        if (err) return callback ? callback(new Error('File not found')) : console.error('Callback not provided for renameAudioFile');
 
         fs.access(newPath, fs.constants.F_OK, (err) => {
-            if (!err) return callback(new Error('File already exists'));
+            if (!err) return callback ? callback(new Error('File already exists')) : console.error('Callback not provided for renameAudioFile');
 
             fs.rename(oldPath, newPath, (err) => {
-                if (err) return callback(err);
-                callback(null, 'Audio renamed successfully');
+                if (err) return callback ? callback(err) : console.error('Callback not provided for renameAudioFile');
+                callback && callback(null, 'Audio renamed successfully');  // Safeguard for optional callback
             });
         });
     });
 }
 
+// Delete multiple audio files
 function deleteAudios(filenames, callback) {
     const deletePromises = filenames.map((filename) => {
         const filePath = path.join(audioDirectory, filename);
@@ -66,10 +70,11 @@ function deleteAudios(filenames, callback) {
     });
 
     Promise.all(deletePromises)
-        .then(() => callback(null))
-        .catch((err) => callback(err));
+        .then(() => callback && callback(null))  // Safeguard for optional callback
+        .catch((err) => callback ? callback(err) : console.error('Callback not provided for deleteAudios'));
 }
 
+// Stream audio file for playback
 function streamAudioFile(filename, req, res) {
     const filePath = path.join(audioDirectory, filename);
     fs.stat(filePath, (err, stats) => {
@@ -100,6 +105,7 @@ function streamAudioFile(filename, req, res) {
     });
 }
 
+// Download audio file
 function downloadAudioFile(filename, res) {
     const filePath = path.join(audioDirectory, filename);
     fs.stat(filePath, (err) => {
