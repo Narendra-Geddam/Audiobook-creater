@@ -23,11 +23,13 @@ app.use('/api', audioRoutes);
 
 // Combine audios endpoint
 app.post('/api/combine-audios', async (req, res) => {
-    const { audioUrls } = req.body;
+    const { audioUrls, customName } = req.body; // Capture custom name from the request
+    console.log('Received audioUrls:', audioUrls);
+    console.log('Received customName:', customName); // Log custom name
 
     try {
-        // Call your combine method in your mergeService
-        const mergedAudioUrl = await mergeService.combineAudioFiles(audioUrls); // Changed function name here
+        // Call your combine method in your mergeService, passing the custom name
+        const mergedAudioUrl = await mergeService.combineAudioFiles(audioUrls, customName);
         res.json({ mergedAudioUrl });
     } catch (error) {
         console.error('Error combining audios:', error);

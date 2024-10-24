@@ -51,7 +51,7 @@ const MainContent = () => {
         }
     };
 
-    const handleTextSubmit = async (text) => {
+    const handleTextSubmit = async (text, customName) => {
         setLoading(true);
         setErrorMessage('');
         setAudioUrls([]);
@@ -80,7 +80,8 @@ const MainContent = () => {
                 );
 
                 const audioContent = response.data.audioContent;
-                const filename = `output_${Date.now()}.mp3`;
+                const filename = customName ? `${customName}.mp3` : `Untitled_${Date.now()}.mp3`;
+
                 await axios.post('http://localhost:3001/api/save-audio', {
                     filename,
                     data: audioContent,
@@ -89,32 +90,19 @@ const MainContent = () => {
                 generatedAudioUrls.push(filename); // Store the filename for merging
             }
 
-            // Merge audio URLs after all chunks are processed
-            if (generatedAudioUrls.length > 1) {
-                const mergedAudioUrl = await mergeAudios(generatedAudioUrls);
-                setAudioUrls([mergedAudioUrl]); // Set the merged audio URL
-            } else if (generatedAudioUrls.length === 1) {
-                // If there's only one audio, just set that URL
-                setAudioUrls([`http://localhost:3001/audio/${generatedAudioUrls[0]}`]);
-            }
+            // Now send the audio URLs and custom name to the combine audios endpoint
+            const mergeResponse = await axios.post('http://localhost:3001/api/combine-audios', {
+                audioUrls: generatedAudioUrls,
+                customName, // Send the custom name here
+            });
+
+            const mergedAudioUrl = mergeResponse.data.mergedAudioUrl;
+            setAudioUrls([mergedAudioUrl]);
         } catch (error) {
             console.error('Error generating speech:', error);
             setErrorMessage(`Error generating speech: ${error.message}`);
         } finally {
             setLoading(false);
-        }
-    };
-
-    // Function to merge audio URLs
-    const mergeAudios = async (audioUrls) => {
-        try {
-            const mergedAudioResponse = await axios.post('http://localhost:3001/api/combine-audios', { // Changed endpoint name
-                audioUrls,
-            });
-            return mergedAudioResponse.data.mergedAudioUrl; // Ensure your API returns the merged audio URL
-        } catch (error) {
-            console.error('Error merging audios:', error);
-            throw new Error(`Error merging audios: ${error.message}`);
         }
     };
 

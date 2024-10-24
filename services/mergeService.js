@@ -63,7 +63,7 @@ function mixAudios(audioFile, bgmFile, outputName, audioVolume, bgmVolume, callb
 }
 
 // Function to merge audio files
-function combineAudioFiles(filenames, outputName = `merged_${Date.now()}.mp3`) {
+function combineAudioFiles(filenames, customName) {
     return new Promise((resolve, reject) => {
         const listFilePath = path.join(__dirname, '..', 'temp.txt');
         const filePaths = filenames.map(filename => `file '${path.join(audioDirectory, filename)}'`).join('\n');
@@ -74,7 +74,10 @@ function combineAudioFiles(filenames, outputName = `merged_${Date.now()}.mp3`) {
                 return reject(err);
             }
 
+            // If a custom name is provided, use it; otherwise, default to merged_<timestamp>.mp3
+            const outputName = customName ? `${customName}_merged.mp3` : `merged_${Date.now()}.mp3`;
             const outputPath = path.join(audioDirectory, outputName); // Save merged audio to mixed-audio folder
+
             exec(`ffmpeg -f concat -safe 0 -i "${listFilePath}" -c copy "${outputPath}"`, (error) => {
                 // Attempt to delete the list file whether there's an error or not
                 fs.unlink(listFilePath, (unlinkError) => {
