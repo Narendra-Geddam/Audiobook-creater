@@ -155,24 +155,27 @@ const AudioList = ({ audios, onRefresh }) => {
     };
 
     useEffect(() => {
-        if (audioRef.current) {
+        const audioElement = audioRef.current; // Create a variable to hold the ref value
+    
+        if (audioElement) {
             const handleTimeUpdate = () => {
-                const progressValue = (audioRef.current.currentTime / audioRef.current.duration) * 100;
+                const progressValue = (audioElement.currentTime / audioElement.duration) * 100;
                 setProgress((prevProgress) => ({
                     ...prevProgress,
                     [playingAudio]: progressValue,
                 }));
             };
-
-            audioRef.current.addEventListener('timeupdate', handleTimeUpdate);
-
+    
+            audioElement.addEventListener('timeupdate', handleTimeUpdate);
+    
             return () => {
-                if (audioRef.current) {
-                    audioRef.current.removeEventListener('timeupdate', handleTimeUpdate);
+                if (audioElement) {
+                    audioElement.removeEventListener('timeupdate', handleTimeUpdate);
                 }
             };
         }
     }, [playingAudio]);
+    
 
     return (
         <div style={{ padding: '20px', backgroundColor: '#f0f4f8' }}>

@@ -11,7 +11,6 @@ import {
     TextField,
     Snackbar,
     Slider,
-    Box
 } from '@mui/material';
 import MuiAlert from '@mui/material/Alert';
 import MixedAudioList from './MixedAudioList';
