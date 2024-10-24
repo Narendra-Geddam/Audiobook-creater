@@ -22,40 +22,30 @@ function saveAudioFile(filename, data, callback) {
 function getGeneratedAudios(callback) {
     fs.readdir(audioDirectory, (err, files) => {
         if (err) {
-            if (typeof callback === 'function') {
-                return callback(err, null);
-            }
-            console.error('Callback is not a function:', callback);
-            return;
+            return typeof callback === 'function' ? callback(err, null) : console.error('Callback is not a function');
         }
         const audioFiles = files.filter(file => file.endsWith('.mp3'));
-        if (typeof callback === 'function') {
-            callback(null, audioFiles);
-        } else {
-            console.error('Callback is not a function:', callback);
-        }
+        typeof callback === 'function' ? callback(null, audioFiles) : console.error('Callback is not a function');
     });
 }
-
-
 
 function renameAudioFile(oldName, newName, callback) {
     const oldPath = path.join(audioDirectory, oldName);
     const newPath = path.join(audioDirectory, newName);
 
     if (oldName === newName) {
-        return callback(new Error('New name must be different'), 400, 'New name must be different from old name');
+        return callback(new Error('New name must be different'));
     }
 
     fs.access(oldPath, fs.constants.F_OK, (err) => {
-        if (err) return callback(new Error('File not found'), 404, 'File not found');
+        if (err) return callback(new Error('File not found'));
 
         fs.access(newPath, fs.constants.F_OK, (err) => {
-            if (!err) return callback(new Error('File already exists'), 409, 'A file with that name already exists');
+            if (!err) return callback(new Error('File already exists'));
 
             fs.rename(oldPath, newPath, (err) => {
-                if (err) return callback(err, 500, 'Error renaming audio');
-                callback(null, 200, 'Audio renamed successfully');
+                if (err) return callback(err);
+                callback(null, 'Audio renamed successfully');
             });
         });
     });
@@ -68,7 +58,7 @@ function deleteAudios(filenames, callback) {
             fs.unlink(filePath, (err) => {
                 if (err) {
                     console.error(`Error deleting audio file ${filename}:`, err);
-                    return reject(`Error deleting audio file ${filename}`);
+                    return reject(new Error(`Error deleting audio file ${filename}`));
                 }
                 resolve();
             });
