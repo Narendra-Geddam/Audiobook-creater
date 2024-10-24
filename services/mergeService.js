@@ -62,7 +62,39 @@ function mixAudios(audioFile, bgmFile, outputName, audioVolume, bgmVolume, callb
     });
 }
 
+// Function to merge audio files
+function combineAudioFiles(filenames, outputName = `merged_${Date.now()}.mp3`) {
+    return new Promise((resolve, reject) => {
+        const listFilePath = path.join(__dirname, '..', 'temp.txt');
+        const filePaths = filenames.map(filename => `file '${path.join(audioDirectory, filename)}'`).join('\n');
+
+        fs.writeFile(listFilePath, filePaths, (err) => {
+            if (err) {
+                console.error('Error writing list file for merging:', err);
+                return reject(err);
+            }
+
+            const outputPath = path.join(audioDirectory, outputName); // Save merged audio to mixed-audio folder
+            exec(`ffmpeg -f concat -safe 0 -i "${listFilePath}" -c copy "${outputPath}"`, (error) => {
+                // Attempt to delete the list file whether there's an error or not
+                fs.unlink(listFilePath, (unlinkError) => {
+                    if (unlinkError) console.error('Error deleting list file:', unlinkError);
+                });
+
+                if (error) {
+                    console.error('Error merging audios:', error);
+                    return reject(error);
+                }
+
+                console.log(`Successfully merged audios into: ${outputPath}`);
+                resolve(outputPath); // Resolve with the merged audio path
+            });
+        });
+    });
+}
+
 module.exports = {
     mergeAudios,
-    mixAudios
+    mixAudios,
+    combineAudioFiles,
 };

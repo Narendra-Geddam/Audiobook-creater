@@ -4,7 +4,7 @@ import { TextField, Button, Typography } from '@mui/material';
 const TextInput = ({ onSubmit }) => {
   const [text, setText] = useState('');
   const [error, setError] = useState(false);
-  const CHARACTER_LIMIT = 5000;
+  const CHARACTER_LIMIT = 10000; // Updated limit to 10,000 characters
 
   const handleChange = (e) => {
     const newText = e.target.value;
@@ -19,7 +19,7 @@ const TextInput = ({ onSubmit }) => {
 
   const handleSubmit = () => {
     if (text.length <= CHARACTER_LIMIT) {
-      onSubmit(text);
+      onSubmit(text); // Pass the text input to the parent
     }
   };
 

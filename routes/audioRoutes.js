@@ -22,6 +22,12 @@ function fileExists(filePath) {
 // Endpoint to save generated audio files
 router.post('/save-audio', async (req, res) => {
     const { filename, data } = req.body;
+
+    // Validate inputs
+    if (typeof filename !== 'string' || typeof data !== 'string') {
+        return res.status(400).send('Invalid filename or data');
+    }
+
     const sanitizedFilename = sanitizeFilename(filename);
 
     try {
@@ -43,10 +49,15 @@ router.get('/generated-audios', (req, res) => {
     });
 });
 
-
 // Endpoint to rename audio files
 router.post('/rename-audio', async (req, res) => {
     const { oldName, newName } = req.body;
+
+    // Validate inputs
+    if (typeof oldName !== 'string' || typeof newName !== 'string') {
+        return res.status(400).send('Invalid old name or new name');
+    }
+
     const sanitizedOldName = sanitizeFilename(oldName);
     const sanitizedNewName = sanitizeFilename(newName);
 
@@ -62,6 +73,12 @@ router.post('/rename-audio', async (req, res) => {
 // Endpoint to merge selected audio files
 router.post('/merge-audios', async (req, res) => {
     const { filenames, outputName } = req.body;
+
+    // Validate inputs
+    if (!Array.isArray(filenames) || typeof outputName !== 'string') {
+        return res.status(400).send('Invalid filenames or output name');
+    }
+
     const sanitizedOutputName = sanitizeFilename(outputName);
 
     try {
@@ -76,6 +93,11 @@ router.post('/merge-audios', async (req, res) => {
 // Endpoint to delete multiple audio files
 router.post('/delete-audios', async (req, res) => {
     const { filenames } = req.body;
+
+    // Validate inputs
+    if (!Array.isArray(filenames)) {
+        return res.status(400).send('Invalid filenames');
+    }
 
     try {
         await fileService.deleteAudios(filenames);
@@ -117,6 +139,12 @@ router.get('/download-audio/:filename', async (req, res) => {
 // Endpoint to mix generated audio with background music (BGM)
 router.post('/mix-audio', async (req, res) => {
     const { audioFile, bgmFile, outputName } = req.body;
+
+    // Validate inputs
+    if (typeof audioFile !== 'string' || typeof bgmFile !== 'string' || typeof outputName !== 'string') {
+        return res.status(400).send('Invalid audio file, BGM file, or output name');
+    }
+
     const sanitizedOutputName = sanitizeFilename(outputName);
 
     console.log('Mixing audio with BGM:', { audioFile, bgmFile, outputName });
@@ -163,6 +191,12 @@ router.get('/mixed-audio', (req, res) => {
 // Endpoint to rename mixed audio files
 router.put('/mixed-audio/rename', async (req, res) => {
     const { oldName, newName } = req.body;
+
+    // Validate inputs
+    if (typeof oldName !== 'string' || typeof newName !== 'string') {
+        return res.status(400).send('Invalid old name or new name');
+    }
+
     const oldPath = path.join(mixedAudioDirectory, sanitizeFilename(oldName));
     const newPath = path.join(mixedAudioDirectory, sanitizeFilename(newName));
 
